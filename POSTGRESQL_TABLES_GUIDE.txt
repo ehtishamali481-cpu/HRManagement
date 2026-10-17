@@ -1,0 +1,104 @@
+================================================================================
+           POSTGRESQL MEIN TABLES BANANE KA COMPLETE STEP-BY-STEP GUIDE
+================================================================================
+
+Is Enterprise HRM project mein 6 main tables hain:
+1. companies       (Organizations / Tenant workspaces)
+2. users           (Login accounts & OTP)
+3. departments     (Engineering, Marketing, Product, Sales)
+4. employees       (Live workforce, role, status, attendance)
+5. leave_requests  (Pending/Approved leave authorization)
+6. company_events  (Holidays, Birthdays, Anniversaries)
+
+--------------------------------------------------------------------------------
+TARIKA 1: AUTOMATIC TABLE CREATION (Sab se asaan - 1 Command)
+--------------------------------------------------------------------------------
+Backend folder (f:\Desktop\hrm\backend) mein terminal open karke ye run karein:
+
+venv\Scripts\python.exe -c "from database import engine, Base; from app.models import Company, User, Department, Employee, LeaveRequest, CompanyEvent; Base.metadata.create_all(bind=engine); print('All 6 tables created successfully!')"
+
+Initial sample workforce data seed karne ke liye:
+venv\Scripts\python.exe seed_data.py
+
+Ye PostgreSQL database mein real records add kar dega jo seedhe dashboard API mein aayenge!
+
+--------------------------------------------------------------------------------
+TARIKA 2: MANUAL SQL SCRIPT (pgAdmin 4 ya psql Query Tool se)
+--------------------------------------------------------------------------------
+pgAdmin 4 open karein -> Databases -> hrm_db -> Query Tool open karein aur ye SQL run karein:
+
+-- 1. COMPANIES
+CREATE TABLE IF NOT EXISTS companies (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(150) NOT NULL,
+    slug VARCHAR(150) UNIQUE NOT NULL,
+    plan VARCHAR(50) DEFAULT 'Enterprise Tier' NOT NULL,
+    hq_location VARCHAR(150) DEFAULT 'Enterprise HQ • San Francisco' NOT NULL,
+    created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+-- 2. USERS
+CREATE TABLE IF NOT EXISTS users (
+    id SERIAL PRIMARY KEY,
+    company_id INTEGER NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+    full_name VARCHAR(120) NOT NULL,
+    email VARCHAR(180) UNIQUE NOT NULL,
+    hashed_password VARCHAR(255) NOT NULL,
+    role VARCHAR(50) DEFAULT 'owner' NOT NULL,
+    avatar_url VARCHAR(255) NULL,
+    is_verified BOOLEAN DEFAULT FALSE NOT NULL,
+    otp_code VARCHAR(10) NULL,
+    otp_expires_at TIMESTAMP WITHOUT TIME ZONE NULL,
+    created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+-- 3. DEPARTMENTS
+CREATE TABLE IF NOT EXISTS departments (
+    id SERIAL PRIMARY KEY,
+    company_id INTEGER NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+    name VARCHAR(100) NOT NULL,
+    created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+-- 4. EMPLOYEES
+CREATE TABLE IF NOT EXISTS employees (
+    id SERIAL PRIMARY KEY,
+    company_id INTEGER NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+    department_id INTEGER NULL REFERENCES departments(id) ON DELETE SET NULL,
+    full_name VARCHAR(120) NOT NULL,
+    email VARCHAR(180) NOT NULL,
+    role_title VARCHAR(100) DEFAULT 'Team Member' NOT NULL,
+    avatar_url VARCHAR(255) NULL,
+    status VARCHAR(50) DEFAULT 'active' NOT NULL,
+    start_date VARCHAR(50) DEFAULT 'Today' NOT NULL,
+    onboarding_progress INTEGER DEFAULT 100 NOT NULL,
+    attendance_status VARCHAR(50) DEFAULT 'present_office' NOT NULL,
+    created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+-- 5. LEAVE REQUESTS
+CREATE TABLE IF NOT EXISTS leave_requests (
+    id SERIAL PRIMARY KEY,
+    company_id INTEGER NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+    employee_id INTEGER NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
+    leave_type VARCHAR(50) DEFAULT 'Annual' NOT NULL,
+    start_date VARCHAR(50) NOT NULL,
+    end_date VARCHAR(50) NOT NULL,
+    days_count INTEGER DEFAULT 1 NOT NULL,
+    reason VARCHAR(255) NULL,
+    status VARCHAR(50) DEFAULT 'pending' NOT NULL,
+    is_urgent BOOLEAN DEFAULT FALSE NOT NULL,
+    created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+-- 6. COMPANY EVENTS
+CREATE TABLE IF NOT EXISTS company_events (
+    id SERIAL PRIMARY KEY,
+    company_id INTEGER NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+    title VARCHAR(150) NOT NULL,
+    subtitle VARCHAR(150) NULL,
+    badge_date VARCHAR(50) DEFAULT 'TODAY' NOT NULL,
+    event_type VARCHAR(50) DEFAULT 'holiday' NOT NULL,
+    created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+================================================================================
